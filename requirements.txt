@@ -1,0 +1,7 @@
+streamlit
+geopandas
+matplotlib
+seaborn
+requests
+pandas
+numpy
