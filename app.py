@@ -22,33 +22,56 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Custom Modern UI Styling
+# 2. Custom Off-White UI Styling
 st.markdown("""
 <style>
+    /* Off-white background setup */
     .stApp {
-        background-color: #0e1117;
-        color: #e0e6ed;
+        background-color: #f8f9fa;
+        color: #212529;
     }
+    
+    /* Card containers */
+    .stMetric {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
     div[data-testid="stMetricValue"] {
         font-size: 1.8rem !important;
         font-weight: 700;
-        color: #00d2ff;
+        color: #1a73e8;
     }
+    
+    /* Hero Header */
     .hero-container {
         text-align: center;
-        padding: 10px 0 25px 0;
-        background: linear-gradient(135deg, rgba(26,115,232,0.15) 0%, rgba(0,188,212,0.15) 100%);
-        border-radius: 16px;
-        border: 1px solid rgba(255,255,255,0.1);
-        margin-bottom: 25px;
+        padding: 20px 0;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        margin-bottom: 20px;
     }
+    
     .hero-title {
-        font-size: 2.5rem;
+        font-size: 2.3rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #1a73e8;
         margin-bottom: 5px;
+    }
+    
+    /* Guide callout box */
+    .guide-box {
+        background-color: #ffffff;
+        border-left: 4px solid #1a73e8;
+        padding: 15px 20px;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -57,13 +80,26 @@ st.markdown("""
 st.markdown("""
 <div class="hero-container">
     <h1 class="hero-title">🌐 GADM World Boundaries & Demographics</h1>
-    <p style="color:#a0aec0; font-size: 1.1rem; margin:0;">
+    <p style="color:#5f6368; font-size: 1.05rem; margin:0;">
         Interactive Analytics Dashboard &nbsp;|&nbsp; <strong>Ahmad Sheraz</strong> &nbsp;|&nbsp; SAP ID: 70177829
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# 4. Data Engine
+# 4. User Interaction & Feature Guide
+with st.expander("📖 Interactive Dashboard Guide & Feature Breakdown", expanded=False):
+    st.markdown("""
+    Welcome to the **GADM World Administrative Boundaries Dashboard**. This platform allows you to perform real-time exploratory data analysis on spatial demography and macroeconomic metrics.
+
+    #### How to Interact with the Dashboard:
+    * **🎛️ Dynamic Sidebar Filtering**: Use the left sidebar to select specific continents or adjust the minimum population threshold slider. All metrics, maps, and statistical charts will update immediately.
+    * **🗺️ Map Controls**: Hover over any country on the choropleth map to display detailed information (Country Name, ISO Code, Population, GDP). You can zoom in/out, pan across regions, or save map snapshots using the top-right toolbar on each chart.
+    * **📊 Interactive Metric Switcher**: Toggle between **Population** and **GDP** views in the spatial section to re-index the map color gradient.
+    * **📈 Chart Hover & Isolation**: Double-click on any continent name in chart legends to isolate that region, or single-click to turn visibility on/off.
+    * **📋 Raw Data Inspection**: Scroll to the bottom and expand **"Explore Raw Data"** to filter, search, or sort the complete underlying dataset.
+    """)
+
+# 5. Data Engine
 @st.cache_data
 def load_data():
     os.makedirs("data", exist_ok=True)
@@ -79,7 +115,6 @@ def load_data():
     gdp = dl("https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv", "data/gdp.csv")
 
     world = gpd.read_file(geo)
-    # Rename 'name' or 'ADMIN' to 'country_name' safely
     col_map = {"ISO3166-1-Alpha-3": "iso3"}
     if "name" in world.columns:
         col_map["name"] = "country_name"
@@ -104,11 +139,11 @@ def load_data():
     world["pop_M"] = world["pop_est"] / 1e6
     return world
 
-with st.spinner("Initializing Interactive Engine..."):
+with st.spinner("Loading environment dataset..."):
     world = load_data()
 
-# 5. Sidebar Controls
-st.sidebar.title("🎛️ Interactive Controls")
+# 6. Sidebar Controls
+st.sidebar.title("🎛️ Dashboard Controls")
 all_cont = sorted([c for c in world["continent"].unique() if c != "Other"])
 sel_cont = st.sidebar.multiselect("Filter Continents", all_cont, default=all_cont)
 
@@ -121,10 +156,9 @@ filtered = world[
     (world["pop_M"].fillna(0) <= pop_range[1])
 ].copy()
 
-# Convert GeoDataFrame to DataFrame
 plot_df = pd.DataFrame(filtered.drop(columns=["geometry"]))
 
-# 6. Key Metrics
+# 7. Summary Metrics
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("🌐 Total Countries", f"{len(plot_df)}")
 c2.metric("🌍 Continents Selected", f"{len(sel_cont)}")
@@ -133,12 +167,17 @@ c4.metric("💰 Total GDP", f"${plot_df['gdp_B'].sum()/1000:.2f} T" if plot_df['
 
 st.markdown("---")
 
-# 7. Interactive Geospatial Visualizations
-st.subheader("🗺️ Dynamic World Choropleths")
-map_tab1, map_tab2 = st.tabs(["Interactive Population Map", "Interactive GDP Map"])
+# 8. Interactive Spatial Choropleth
+st.subheader("🗺️ Dynamic World Spatial Analysis")
 
-with map_tab1:
-    fig_pop = px.choropleth(
+metric_choice = st.radio(
+    "Select Map Variable:",
+    options=["Population (Millions)", "GDP (Billion USD)"],
+    horizontal=True
+)
+
+if metric_choice == "Population (Millions)":
+    fig_map = px.choropleth(
         plot_df,
         locations="iso3",
         locationmode="ISO-3",
@@ -146,14 +185,12 @@ with map_tab1:
         hover_name="country_name",
         hover_data={"pop_M": ":.2f", "gdp_B": ":.2f", "continent": True, "iso3": False},
         labels={"pop_M": "Population (M)", "gdp_B": "GDP ($B)"},
-        color_continuous_scale="Viridis",
-        projection="natural earth"
+        color_continuous_scale="Blues",
+        projection="natural earth",
+        template="plotly_white"
     )
-    fig_pop.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
-    st.plotly_chart(fig_pop, use_container_width=True)
-
-with map_tab2:
-    fig_gdp = px.choropleth(
+else:
+    fig_map = px.choropleth(
         plot_df,
         locations="iso3",
         locationmode="ISO-3",
@@ -161,20 +198,26 @@ with map_tab2:
         hover_name="country_name",
         hover_data={"gdp_B": ":.2f", "pop_M": ":.2f", "continent": True, "iso3": False},
         labels={"gdp_B": "GDP ($B)", "pop_M": "Population (M)"},
-        color_continuous_scale="Cividis",
-        projection="natural earth"
+        color_continuous_scale="Viridis",
+        projection="natural earth",
+        template="plotly_white"
     )
-    fig_gdp.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
-    st.plotly_chart(fig_gdp, use_container_width=True)
+
+fig_map.update_layout(
+    margin={"r":0,"t":10,"l":0,"b":0},
+    paper_bgcolor='#ffffff',
+    plot_bgcolor='#ffffff'
+)
+st.plotly_chart(fig_map, use_container_width=True)
 
 st.markdown("---")
 
-# 8. Interactive Analytical Charts
-st.subheader("📈 Statistical Explorer")
+# 9. Statistical Visualizations
+st.subheader("📈 Macroeconomic Correlation & Variance")
 col_a, col_b = st.columns(2)
 
 with col_a:
-    st.markdown("**Population vs GDP Correlation**")
+    st.markdown("**Population vs GDP Relationship**")
     fig_scatter = px.scatter(
         plot_df.dropna(subset=["pop_M", "gdp_B"]),
         x="pop_M",
@@ -184,14 +227,14 @@ with col_a:
         hover_name="country_name",
         log_x=True,
         log_y=True,
-        labels={"pop_M": "Population (Millions, Log)", "gdp_B": "GDP (Billion USD, Log)"},
-        template="plotly_dark"
+        labels={"pop_M": "Population (Millions, Log Scale)", "gdp_B": "GDP (Billion USD, Log Scale)"},
+        template="plotly_white"
     )
-    fig_scatter.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    fig_scatter.update_layout(paper_bgcolor='#ffffff', plot_bgcolor='#ffffff')
     st.plotly_chart(fig_scatter, use_container_width=True)
 
 with col_b:
-    st.markdown("**GDP Distribution by Continent**")
+    st.markdown("**Regional Economic Output Distribution**")
     fig_box = px.box(
         plot_df.dropna(subset=["gdp_B"]),
         x="continent",
@@ -200,16 +243,16 @@ with col_b:
         points="all",
         hover_name="country_name",
         log_y=True,
-        labels={"gdp_B": "GDP in Billions (Log Scale)"},
-        template="plotly_dark"
+        labels={"gdp_B": "GDP in Billions (Log Scale)", "continent": "Continent"},
+        template="plotly_white"
     )
-    fig_box.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
+    fig_box.update_layout(paper_bgcolor='#ffffff', plot_bgcolor='#ffffff', showlegend=False)
     st.plotly_chart(fig_box, use_container_width=True)
 
 st.markdown("---")
 
-# 9. Top 10 Dynamic Ranking
-st.subheader("🏆 Top 10 Ranked Nations")
+# 10. Top Rankings & Data Table
+st.subheader("🏆 Top Ranked Economies")
 top10 = plot_df.nlargest(10, "pop_M")
 
 fig_bar = px.bar(
@@ -219,15 +262,18 @@ fig_bar = px.bar(
     orientation="h",
     color="gdp_B",
     hover_data=["continent", "gdp_B"],
-    labels={"pop_M": "Population (Millions)", "country_name": "Country", "gdp_B": "GDP ($B)"},
+    labels={"pop_M": "Population (Millions)", "country_name": "Country Name", "gdp_B": "GDP ($B)"},
     color_continuous_scale="Blues",
-    template="plotly_dark"
+    template="plotly_white"
 )
-fig_bar.update_layout(yaxis={'categoryorder': 'total ascending'}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+fig_bar.update_layout(
+    yaxis={'categoryorder': 'total ascending'},
+    paper_bgcolor='#ffffff',
+    plot_bgcolor='#ffffff'
+)
 st.plotly_chart(fig_bar, use_container_width=True)
 
-# 10. Data View
-with st.expander("📋 Explore Raw Data"):
+with st.expander("📋 View Complete Filtered Dataset"):
     st.dataframe(
         plot_df[["country_name", "iso3", "continent", "pop_M", "gdp_B"]].rename(
             columns={"country_name": "Country", "iso3": "ISO Code", "continent": "Continent", "pop_M": "Population (M)", "gdp_B": "GDP ($B)"}
