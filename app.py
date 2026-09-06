@@ -1,5 +1,5 @@
 """
-Streamlit Dashboard — GADM World Admin Boundaries EDA
+Streamlit Modern Interactive Dashboard — GADM World Admin Boundaries EDA
 SAP ID: 70177829
 Run: streamlit run app.py
 """
@@ -11,60 +11,69 @@ import requests
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import pydeck as pdk
 import streamlit as st
 
 # 1. Page Config
 st.set_page_config(
-    page_title="GADM EDA | SAP 70177829",
-    page_icon="🌍",
-    layout="wide"
+    page_title="Modern GADM Dashboard | SAP 70177829",
+    page_icon="🌐",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# 2. Custom CSS & Header
+# 2. Custom Modern UI Styling
 st.markdown("""
 <style>
-.globe-svg { animation: spin 18s linear infinite; display:block; }
-@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-.hero-title {
-  font-family: 'Segoe UI', sans-serif; font-size: 2.3rem; font-weight: 800;
-  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 50%, #00bcd4 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;
-}
+    /* Global background and card styling */
+    .stApp {
+        background-color: #0e1117;
+        color: #e0e6ed;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700;
+        color: #00d2ff;
+    }
+    .css-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+    }
+    .hero-container {
+        text-align: center;
+        padding: 10px 0 25px 0;
+        background: linear-gradient(135deg, rgba(26,115,232,0.15) 0%, rgba(0,188,212,0.15) 100%);
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 25px;
+    }
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 5px;
+    }
 </style>
-<div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:6px;">
-  <svg class="globe-svg" width="62" height="62" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="g1" cx="38%" cy="35%">
-        <stop offset="0%" stop-color="#4fc3f7"/>
-        <stop offset="60%" stop-color="#1565c0"/>
-        <stop offset="100%" stop-color="#0d2b6e"/>
-      </radialGradient>
-    </defs>
-    <circle cx="32" cy="32" r="30" fill="url(#g1)"/>
-    <ellipse cx="32" cy="32" rx="13" ry="30" fill="none" stroke="#81d4fa" stroke-width="1.2" opacity="0.65"/>
-    <ellipse cx="32" cy="32" rx="30" ry="12" fill="none" stroke="#81d4fa" stroke-width="1.2" opacity="0.65"/>
-    <line x1="2" y1="32" x2="62" y2="32" stroke="#81d4fa" stroke-width="1" opacity="0.5"/>
-    <line x1="32" y1="2" x2="32" y2="62" stroke="#81d4fa" stroke-width="1" opacity="0.5"/>
-    <circle cx="22" cy="26" r="4.5" fill="#a5d6a7" opacity="0.85"/>
-    <circle cx="38" cy="20" r="5.5" fill="#a5d6a7" opacity="0.85"/>
-    <circle cx="44" cy="37" r="3.5" fill="#a5d6a7" opacity="0.8"/>
-    <circle cx="20" cy="41" r="3" fill="#a5d6a7" opacity="0.75"/>
-    <circle cx="32" cy="32" r="30" fill="none" stroke="#4fc3f7" stroke-width="2"/>
-  </svg>
-  <h1 class="hero-title">GADM World Admin Boundaries — EDA Dashboard</h1>
-</div>
-<p style="text-align:center;color:#546e7a;font-size:16px;margin-top:4px;">
-  <strong style="color:#1a73e8;font-size:18px;">Ahmad Sheraz</strong>
-  &nbsp;|&nbsp; Section B &nbsp;|&nbsp; GADM World Administrative Boundaries
-</p>
-<hr style="border:none;border-top:2px solid #e3f2fd;margin:16px 0;">
 """, unsafe_allow_html=True)
 
-# 3. Data Loading
+# 3. Header
+st.markdown("""
+<div class="hero-container">
+    <h1 class="hero-title">🌐 GADM World Boundaries & Demographics</h1>
+    <p style="color:#a0aec0; font-size: 1.1rem; margin:0;">
+        Interactive Analytics Dashboard &nbsp;|&nbsp; <strong>Ahmad Sheraz</strong> &nbsp;|&nbsp; SAP ID: 70177829
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# 4. Data Engine
 @st.cache_data
 def load_data():
     os.makedirs("data", exist_ok=True)
@@ -80,7 +89,7 @@ def load_data():
     gdp = dl("https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv", "data/gdp.csv")
 
     world = gpd.read_file(geo)
-    world.rename(columns={"ISO3166-1-Alpha-3": "iso3", "ISO3166-1-Alpha-2": "iso2"}, inplace=True)
+    world.rename(columns={"ISO3166-1-Alpha-3": "iso3", "ADMIN": "country_name"}, inplace=True)
 
     pop_df = pd.read_csv(pop)
     pop_l = pop_df.sort_values("Year").groupby("Country Code").last().reset_index()[["Country Code", "Value"]].rename(columns={"Country Code": "iso3", "Value": "pop_est"})
@@ -98,173 +107,130 @@ def load_data():
     world["pop_M"] = world["pop_est"] / 1e6
     return world
 
-try:
-    with st.spinner("Loading GADM geographical data..."):
-        world = load_data()
-except Exception as e:
-    st.error(f"Error loading geographical data: {e}")
-    st.stop()
+with st.spinner("Initializing Interactive Engine..."):
+    world = load_data()
 
-# 4. Sidebar Controls
-st.sidebar.title("🔧 Filters & Controls")
+# 5. Sidebar Controls
+st.sidebar.title("🎛️ Interactive Controls")
 all_cont = sorted([c for c in world["continent"].unique() if c != "Other"])
-sel_cont = st.sidebar.multiselect("Select Continents", all_cont, default=all_cont)
+sel_cont = st.sidebar.multiselect("Filter Continents", all_cont, default=all_cont)
 
 pop_max = int(world["pop_M"].max() * 1.1)
-pop_range = st.sidebar.slider("Population Range (Millions)", 0, pop_max, (0, pop_max))
+pop_range = st.sidebar.slider("Population Threshold (Millions)", 0, pop_max, (0, pop_max))
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<div style="background:linear-gradient(135deg,#e3f2fd,#bbdefb);padding:14px 16px;border-radius:10px;border-left:4px solid #1a73e8;">
-  <p style="margin:0;font-size:15px;font-weight:700;color:#0d47a1;">👤 Ahmad Sheraz</p>
-  <p style="margin:4px 0 0 0;font-size:13px;color:#546e7a;">SAP ID: 70177829 | Section B</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Filter Data
 filtered = world[
     (world["continent"].isin(sel_cont) | (world["continent"] == "Other")) &
     (world["pop_M"].fillna(0) >= pop_range[0]) &
     (world["pop_M"].fillna(0) <= pop_range[1])
 ].copy()
 
-# 5. Key Statistics Formatting
-def fmt_pop(m):
-    return f"{m/1000:.2f} Billion" if m >= 1000 else f"{m:.0f} Million"
-
-def fmt_gdp(b):
-    return f"${b/1000:.2f} Trillion" if b >= 1000 else f"${b:.1f} Billion"
-
-st.subheader("📊 Key Statistics")
+# 6. Key Metrics
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("🌐 Total Countries", len(filtered))
-c2.metric("🌍 Continents Selected", len(sel_cont))
-c3.metric("👥 Total Population", fmt_pop(filtered["pop_M"].sum()))
-c4.metric("💰 Total GDP", fmt_gdp(filtered["gdp_B"].sum()))
+c1.metric("🌐 Total Countries", f"{len(filtered)}")
+c2.metric("🌍 Continents Selected", f"{len(sel_cont)}")
+c3.metric("👥 Total Population", f"{filtered['pop_M'].sum()/1000:.2f} B" if filtered['pop_M'].sum()>=1000 else f"{filtered['pop_M'].sum():.0f} M")
+c4.metric("💰 Total GDP", f"${filtered['gdp_B'].sum()/1000:.2f} T" if filtered['gdp_B'].sum()>=1000 else f"${filtered['gdp_B'].sum():.1f} B")
 
 st.markdown("---")
 
-# 6. Map Visualizations
-st.subheader("🗺️ Spatial Distribution Maps")
-t1, t2 = st.tabs(["Population Choropleth", "GDP Choropleth"])
+# 7. Interactive Geospatial Visualizations
+st.subheader("🗺️ Dynamic World Choropleths")
+map_tab1, map_tab2 = st.tabs(["Interactive Population Map", "Interactive GDP Map"])
 
-with t1:
-    fig, ax = plt.subplots(figsize=(16, 7))
-    filtered.plot(
-        column="pop_est", ax=ax, legend=True, cmap="YlOrRd",
-        legend_kwds={"label": "Population", "orientation": "horizontal", "shrink": 0.5},
-        missing_kwds={"color": "#eee"}, edgecolor="white", linewidth=0.3
+with map_tab1:
+    fig_pop = px.choropleth(
+        filtered,
+        geojson=filtered.geometry,
+        locations=filtered.index,
+        color="pop_M",
+        hover_name="country_name",
+        hover_data={"pop_M": ":.2f", "gdp_B": ":.2f", "continent": True},
+        labels={"pop_M": "Population (M)", "gdp_B": "GDP ($B)"},
+        color_continuous_scale="Viridis",
+        projection="natural earth"
     )
-    ax.set_title("GADM World Administrative Boundaries — Population Density", fontsize=12, fontweight="bold")
-    ax.set_axis_off()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
+    fig_pop.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+    st.plotly_chart(fig_pop, use_container_width=True)
 
-with t2:
-    fig, ax = plt.subplots(figsize=(16, 7))
-    filtered.plot(
-        column="gdp_usd", ax=ax, legend=True, cmap="Blues",
-        legend_kwds={"label": "GDP (USD)", "orientation": "horizontal", "shrink": 0.5},
-        missing_kwds={"color": "#eee"}, edgecolor="white", linewidth=0.3
+with map_tab2:
+    fig_gdp = px.choropleth(
+        filtered,
+        geojson=filtered.geometry,
+        locations=filtered.index,
+        color="gdp_B",
+        hover_name="country_name",
+        hover_data={"gdp_B": ":.2f", "pop_M": ":.2f", "continent": True},
+        labels={"gdp_B": "GDP ($B)", "pop_M": "Population (M)"},
+        color_continuous_scale="Cividis",
+        projection="natural earth"
     )
-    ax.set_title("GADM World Administrative Boundaries — Gross Domestic Product (GDP)", fontsize=12, fontweight="bold")
-    ax.set_axis_off()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
+    fig_gdp.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+    st.plotly_chart(fig_gdp, use_container_width=True)
 
 st.markdown("---")
 
-# 7. Distribution Analysis
-st.subheader("📈 Statistical Distributions")
-ca, cb = st.columns(2)
+# 8. Interactive Analytical Charts
+st.subheader("📈 Statistical Explorer")
+col_a, col_b = st.columns(2)
 
-with ca:
-    st.markdown("**Countries per Continent**")
-    cc = filtered[filtered["continent"] != "Other"].groupby("continent")["name"].count().sort_values()
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    ax.barh(cc.index, cc.values, color=plt.cm.Set2(np.linspace(0, 1, len(cc))), edgecolor="white")
-    for i, (idx, val) in enumerate(cc.items()):
-        ax.text(val + 0.2, i, str(val), va="center", fontweight="bold")
-    ax.set_xlabel("Number of Countries")
-    sns.despine()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
-
-with cb:
-    st.markdown("**Population Spread (Log Scale)**")
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    ax.hist(np.log10(filtered["pop_est"].dropna() + 1), bins=20, color="#1a73e8", edgecolor="white", alpha=0.85)
-    ax.set_xlabel("log₁₀(Population)")
-    ax.set_ylabel("Country Count")
-    sns.despine()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
-
-st.markdown("---")
-
-# 8. Relationship Analysis
-st.subheader("🔍 Macroeconomic Relationships")
-cc2, cd2 = st.columns(2)
-
-with cc2:
-    st.markdown("**GDP vs Population**")
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    conts = [c for c in filtered["continent"].unique() if c != "Other"]
-    cmap2 = matplotlib.colormaps["tab10"].resampled(max(1, len(conts)))
-    for i, cont in enumerate(conts):
-        sub = filtered[(filtered["continent"] == cont)].dropna(subset=["pop_M", "gdp_B"])
-        ax.scatter(sub["pop_M"], sub["gdp_B"], label=cont, color=cmap2(i), alpha=0.75, s=45, edgecolors="white")
-    ax.set_xlabel("Population (Millions)")
-    ax.set_ylabel("GDP (Billion USD)")
-    ax.legend(title="Continent", fontsize=8)
-    sns.despine()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
-
-with cd2:
-    st.markdown("**GDP Variance across Continents**")
-    wc = filtered[(filtered["continent"] != "Other")].dropna(subset=["gdp_usd"])
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    if len(wc) > 0:
-        co = wc.groupby("continent")["gdp_usd"].median().sort_values(ascending=False).index
-        sns.boxplot(data=wc, x="continent", y="gdp_usd", order=co, palette="Set2", ax=ax)
-        ax.set_yscale("log")
-        ax.set_xlabel("Continent")
-        ax.set_ylabel("GDP USD (Log Scale)")
-        plt.xticks(rotation=25, ha="right")
-        sns.despine()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
-
-st.markdown("---")
-
-# 9. Top 10 Summary Table
-st.subheader("🏆 Top 10 Countries by Population")
-top10 = filtered.nlargest(10, "pop_est")[["name", "continent", "pop_M", "gdp_B"]].rename(
-    columns={"name": "Country", "continent": "Continent", "pop_M": "Population (M)", "gdp_B": "GDP (B USD)"}
-).reset_index(drop=True)
-
-col_t, col_b = st.columns([1, 1])
-with col_t:
-    st.dataframe(top10.round(1), use_container_width=True)
+with col_a:
+    st.markdown("**Population vs GDP Correlation**")
+    fig_scatter = px.scatter(
+        filtered.dropna(subset=["pop_M", "gdp_B"]),
+        x="pop_M",
+        y="gdp_B",
+        color="continent",
+        size="pop_M",
+        hover_name="country_name",
+        log_x=True,
+        log_y=True,
+        labels={"pop_M": "Population (Millions, Log)", "gdp_B": "GDP (Billion USD, Log)"},
+        template="plotly_dark"
+    )
+    fig_scatter.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
 with col_b:
-    fig, ax = plt.subplots(figsize=(7, 4.5))
-    ax.barh(top10["Country"], top10["Population (M)"], color=plt.cm.tab10(np.linspace(0, 1, len(top10))), edgecolor="white")
-    ax.set_xlabel("Population (Millions)")
-    ax.invert_yaxis()
-    sns.despine()
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close()
+    st.markdown("**GDP Distribution by Continent**")
+    fig_box = px.box(
+        filtered.dropna(subset=["gdp_B"]),
+        x="continent",
+        y="gdp_B",
+        color="continent",
+        points="all",
+        hover_name="country_name",
+        log_y=True,
+        labels={"gdp_B": "GDP in Billions (Log Scale)"},
+        template="plotly_dark"
+    )
+    fig_box.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False)
+    st.plotly_chart(fig_box, use_container_width=True)
 
-with st.expander("📋 View Complete Dataset"):
-    st.dataframe(filtered.drop(columns="geometry").round(2).reset_index(drop=True), use_container_width=True)
+st.markdown("---")
 
-st.markdown("<p style='text-align:center;color:#bdc3c7;font-size:12px;margin-top:20px;'>GADM EDA Dashboard | Developed by Ahmad Sheraz (SAP ID: 70177829)</p>", unsafe_allow_html=True)
+# 9. Top 10 Dynamic Ranking
+st.subheader("🏆 Top 10 Ranked Nations")
+top10 = filtered.nlargest(10, "pop_M")
+
+fig_bar = px.bar(
+    top10,
+    x="pop_M",
+    y="country_name",
+    orientation="h",
+    color="gdp_B",
+    hover_data=["continent", "gdp_B"],
+    labels={"pop_M": "Population (Millions)", "country_name": "Country", "gdp_B": "GDP ($B)"},
+    color_continuous_scale="Blues",
+    template="plotly_dark"
+)
+fig_bar.update_layout(yaxis={'categoryorder': 'total ascending'}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+st.plotly_chart(fig_bar, use_container_width=True)
+
+# 10. Data View
+with st.expander("📋 Explore Raw Data"):
+    st.dataframe(
+        filtered[["country_name", "iso3", "continent", "pop_M", "gdp_B"]].rename(
+            columns={"country_name": "Country", "iso3": "ISO Code", "continent": "Continent", "pop_M": "Population (M)", "gdp_B": "GDP ($B)"}
+        ).sort_values("Population (M)", ascending=False),
+        use_container_width=True
+    )

@@ -1,7 +1,7 @@
 streamlit
 geopandas
-matplotlib
-seaborn
-requests
 pandas
 numpy
+requests
+plotly
+pydeck
