@@ -79,7 +79,14 @@ def load_data():
     gdp = dl("https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv", "data/gdp.csv")
 
     world = gpd.read_file(geo)
-    world.rename(columns={"ISO3166-1-Alpha-3": "iso3", "ADMIN": "country_name"}, inplace=True)
+    # Rename 'name' or 'ADMIN' to 'country_name' safely
+    col_map = {"ISO3166-1-Alpha-3": "iso3"}
+    if "name" in world.columns:
+        col_map["name"] = "country_name"
+    elif "ADMIN" in world.columns:
+        col_map["ADMIN"] = "country_name"
+
+    world.rename(columns=col_map, inplace=True)
 
     pop_df = pd.read_csv(pop)
     pop_l = pop_df.sort_values("Year").groupby("Country Code").last().reset_index()[["Country Code", "Value"]].rename(columns={"Country Code": "iso3", "Value": "pop_est"})
@@ -114,7 +121,7 @@ filtered = world[
     (world["pop_M"].fillna(0) <= pop_range[1])
 ].copy()
 
-# Convert GeoDataFrame to standard pandas DataFrame for Plotly compatibility
+# Convert GeoDataFrame to DataFrame
 plot_df = pd.DataFrame(filtered.drop(columns=["geometry"]))
 
 # 6. Key Metrics
