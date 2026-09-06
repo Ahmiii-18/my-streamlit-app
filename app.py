@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
-import pydeck as pdk
 import streamlit as st
 
 # 1. Page Config
@@ -26,7 +25,6 @@ st.set_page_config(
 # 2. Custom Modern UI Styling
 st.markdown("""
 <style>
-    /* Global background and card styling */
     .stApp {
         background-color: #0e1117;
         color: #e0e6ed;
@@ -35,14 +33,6 @@ st.markdown("""
         font-size: 1.8rem !important;
         font-weight: 700;
         color: #00d2ff;
-    }
-    .css-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        margin-bottom: 20px;
     }
     .hero-container {
         text-align: center;
@@ -124,12 +114,15 @@ filtered = world[
     (world["pop_M"].fillna(0) <= pop_range[1])
 ].copy()
 
+# Convert GeoDataFrame to standard pandas DataFrame for Plotly compatibility
+plot_df = pd.DataFrame(filtered.drop(columns=["geometry"]))
+
 # 6. Key Metrics
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("🌐 Total Countries", f"{len(filtered)}")
+c1.metric("🌐 Total Countries", f"{len(plot_df)}")
 c2.metric("🌍 Continents Selected", f"{len(sel_cont)}")
-c3.metric("👥 Total Population", f"{filtered['pop_M'].sum()/1000:.2f} B" if filtered['pop_M'].sum()>=1000 else f"{filtered['pop_M'].sum():.0f} M")
-c4.metric("💰 Total GDP", f"${filtered['gdp_B'].sum()/1000:.2f} T" if filtered['gdp_B'].sum()>=1000 else f"${filtered['gdp_B'].sum():.1f} B")
+c3.metric("👥 Total Population", f"{plot_df['pop_M'].sum()/1000:.2f} B" if plot_df['pop_M'].sum()>=1000 else f"{plot_df['pop_M'].sum():.0f} M")
+c4.metric("💰 Total GDP", f"${plot_df['gdp_B'].sum()/1000:.2f} T" if plot_df['gdp_B'].sum()>=1000 else f"${plot_df['gdp_B'].sum():.1f} B")
 
 st.markdown("---")
 
@@ -139,12 +132,12 @@ map_tab1, map_tab2 = st.tabs(["Interactive Population Map", "Interactive GDP Map
 
 with map_tab1:
     fig_pop = px.choropleth(
-        filtered,
-        geojson=filtered.geometry,
-        locations=filtered.index,
+        plot_df,
+        locations="iso3",
+        locationmode="ISO-3",
         color="pop_M",
         hover_name="country_name",
-        hover_data={"pop_M": ":.2f", "gdp_B": ":.2f", "continent": True},
+        hover_data={"pop_M": ":.2f", "gdp_B": ":.2f", "continent": True, "iso3": False},
         labels={"pop_M": "Population (M)", "gdp_B": "GDP ($B)"},
         color_continuous_scale="Viridis",
         projection="natural earth"
@@ -154,12 +147,12 @@ with map_tab1:
 
 with map_tab2:
     fig_gdp = px.choropleth(
-        filtered,
-        geojson=filtered.geometry,
-        locations=filtered.index,
+        plot_df,
+        locations="iso3",
+        locationmode="ISO-3",
         color="gdp_B",
         hover_name="country_name",
-        hover_data={"gdp_B": ":.2f", "pop_M": ":.2f", "continent": True},
+        hover_data={"gdp_B": ":.2f", "pop_M": ":.2f", "continent": True, "iso3": False},
         labels={"gdp_B": "GDP ($B)", "pop_M": "Population (M)"},
         color_continuous_scale="Cividis",
         projection="natural earth"
@@ -176,7 +169,7 @@ col_a, col_b = st.columns(2)
 with col_a:
     st.markdown("**Population vs GDP Correlation**")
     fig_scatter = px.scatter(
-        filtered.dropna(subset=["pop_M", "gdp_B"]),
+        plot_df.dropna(subset=["pop_M", "gdp_B"]),
         x="pop_M",
         y="gdp_B",
         color="continent",
@@ -193,7 +186,7 @@ with col_a:
 with col_b:
     st.markdown("**GDP Distribution by Continent**")
     fig_box = px.box(
-        filtered.dropna(subset=["gdp_B"]),
+        plot_df.dropna(subset=["gdp_B"]),
         x="continent",
         y="gdp_B",
         color="continent",
@@ -210,7 +203,7 @@ st.markdown("---")
 
 # 9. Top 10 Dynamic Ranking
 st.subheader("🏆 Top 10 Ranked Nations")
-top10 = filtered.nlargest(10, "pop_M")
+top10 = plot_df.nlargest(10, "pop_M")
 
 fig_bar = px.bar(
     top10,
@@ -229,7 +222,7 @@ st.plotly_chart(fig_bar, use_container_width=True)
 # 10. Data View
 with st.expander("📋 Explore Raw Data"):
     st.dataframe(
-        filtered[["country_name", "iso3", "continent", "pop_M", "gdp_B"]].rename(
+        plot_df[["country_name", "iso3", "continent", "pop_M", "gdp_B"]].rename(
             columns={"country_name": "Country", "iso3": "ISO Code", "continent": "Continent", "pop_M": "Population (M)", "gdp_B": "GDP ($B)"}
         ).sort_values("Population (M)", ascending=False),
         use_container_width=True
