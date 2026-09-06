@@ -1,70 +1,36 @@
-# GADM World Admin Boundaries — EDA Project
+# 🌍 GADM World Administrative Boundaries — EDA Dashboard
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://my-streamlt-app.streamlit.app/)
+
+**Author:** Ahmad Sheraz  
 **SAP ID:** 70177829  
-**Dataset:** GADM World Administrative Boundaries (Level 0–3)  
-**Course:** EDA 350 / Data Analysis
+**Section:** B  
+**Live Application:** [GADM EDA Dashboard](https://my-streamlt-app.streamlit.app/)
+
+---
+
+## 📌 Project Overview
+
+This interactive Exploratory Data Analysis (EDA) dashboard analyzes global administrative boundaries, spatial demography, and macroeconomic indicators using **GADM** and **World Bank** datasets. Built with Python and Streamlit, the application provides interactive geographic choropleths, macroeconomic scatter plots, and dynamic filtering across continents and population thresholds.
+
+---
+
+## 🛠️ Key Features
+
+* **Interactive Filters:** Filter data dynamically by continent selections and population ranges in real time.
+* **Geospatial Choropleths:** Spatial visualizations mapping population distribution and total GDP across global administrative boundaries.
+* **Statistical Distribution Analysis:** Analyzes country counts per continent and population variance on logarithmic scales.
+* **Macroeconomic Correlations:** Explores relationships between population size and economic output (GDP).
+* **Summary & Data Export:** Features dynamic metric cards, top 10 rankings, and an expandable raw tabular dataset view.
 
 ---
 
 ## 📁 Project Structure
-```
-gadm_eda_project/
-├── app.py              ← Streamlit web app (for deployment)
-├── eda_gadm.py         ← Standalone EDA script (generates all graphs)
-├── requirements.txt    ← Python dependencies
-├── README.md           ← This file
-└── screenshots/        ← All graph screenshots (auto-generated)
-```
 
----
-
-## 🔧 How to Run Locally
-
-### 1. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Run EDA script (generates all screenshots)
-```bash
-python eda_gadm.py
-```
-
-### 3. Run Streamlit app
-```bash
-streamlit run app.py
-```
-Open browser at `http://localhost:8501`
-
----
-
-## 📊 Visualizations Included
-
-| # | Graph | Type |
-|---|-------|------|
-| 1 | World Population Choropleth | Geographic Map |
-| 2 | World GDP Choropleth | Geographic Map |
-| 3 | Countries per Continent | Horizontal Bar |
-| 4 | Population Distribution | Histogram |
-| 5 | Top 10 Most Populated Countries | Bar Chart |
-| 6 | GDP vs Population Scatter | Scatter Plot |
-| 7 | GDP Boxplot per Continent | Box Plot |
-
----
-
-## 🚀 Deployment (Render — +5 Bonus Marks)
-
-1. Push this folder to GitHub
-2. Go to [render.com](https://render.com) → New Web Service
-3. Connect your GitHub repo
-4. Set:
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
-5. Click **Deploy** → Get your public URL!
-
----
-
-## 📌 Dataset Info
-- **Source:** GADM (Database of Global Administrative Areas)
-- **SAP ID:** 70177829
-- **Direct Download:** `gadm_410-levels.zip`
-- **Description:** Administrative boundaries for every country down to level 3 as Shapefile/GeoPackage
+```text
+GADM/
+├── app.py              # Main Streamlit web application
+├── eda_gadm.py         # Standalone EDA script for static figure generation
+├── requirements.txt    # Required Python dependencies
+├── runtime.txt         # Environment Python runtime configuration
+└── README.md           # Project documentation
